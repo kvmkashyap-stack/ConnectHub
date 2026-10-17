@@ -1,26 +1,40 @@
 import os
+import logging
 from dotenv import load_dotenv
-from sqlalchemy import create_engine,text
-from sqlalchemy.orm import sessionmaker,DeclarativeBase
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 load_dotenv()
+logger = logging.getLogger("connecthub.database")
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Fallback to local SQLite if DATABASE_URL is not set (prevents cold-start crash during deploy)
-if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///./connecthub.db"
+# Resolve serverless writable path (AWS Lambda / Vercel has read-only root, writable /tmp)
+if os.path.exists("/tmp") and os.access("/tmp", os.W_OK):
+    FALLBACK_DB = "sqlite:////tmp/connecthub.db"
+else:
+    FALLBACK_DB = "sqlite:///./connecthub.db"
 
-# Normalise postgres:// scheme to postgresql:// for SQLAlchemy compatibility
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+target_url = DATABASE_URL or FALLBACK_DB
 
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+# Normalise postgres:// to postgresql:// for SQLAlchemy compatibility
+if target_url.startswith("postgres://"):
+    target_url = target_url.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    connect_args=connect_args,
-)
+try:
+    connect_args = {"check_same_thread": False} if target_url.startswith("sqlite") else {}
+    engine = create_engine(
+        target_url,
+        pool_pre_ping=True,
+        connect_args=connect_args,
+    )
+except Exception as e:
+    logger.warning(f"Database engine init with primary URL failed: {e}. Falling back to SQLite.")
+    engine = create_engine(
+        FALLBACK_DB,
+        pool_pre_ping=True,
+        connect_args={"check_same_thread": False},
+    )
 
 SessionLocal = sessionmaker(
     bind=engine,
@@ -28,10 +42,8 @@ SessionLocal = sessionmaker(
     autocommit=False,
 )
 
-
 class Base(DeclarativeBase):
     pass
-
 
 def test_database_connection():
     with engine.connect() as connection:

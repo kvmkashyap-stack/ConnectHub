@@ -49,12 +49,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Auto-initialize database tables on startup
-try:
-    from database import Base, engine
-    Base.metadata.create_all(bind=engine)
-except Exception as _e:
-    pass
+@app.on_event("startup")
+async def startup_event():
+    try:
+        from database import Base, engine
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Startup DB init notice: {e}")
 
 password_hash = PasswordHash.recommended()
 
