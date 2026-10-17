@@ -49,15 +49,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def startup_event():
-    try:
-        from database import Base, engine
-        Base.metadata.create_all(bind=engine)
-    except Exception as e:
-        print(f"Startup DB init notice: {e}")
-
-password_hash = PasswordHash.recommended()
+try:
+    password_hash = PasswordHash.recommended()
+except Exception:
+    import hashlib
+    class _FallbackHasher:
+        def hash(self, secret: str) -> str:
+            return hashlib.sha256(secret.encode("utf-8")).hexdigest()
+        def verify(self, secret: str, hashed: str) -> bool:
+            return hashlib.sha256(secret.encode("utf-8")).hexdigest() == hashed
+    password_hash = _FallbackHasher()
 
 
 # ---------------- DATABASE ----------------

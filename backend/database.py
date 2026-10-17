@@ -21,18 +21,25 @@ target_url = DATABASE_URL or FALLBACK_DB
 if target_url.startswith("postgres://"):
     target_url = target_url.replace("postgres://", "postgresql://", 1)
 
+from sqlalchemy.pool import NullPool
+
 try:
-    connect_args = {"check_same_thread": False} if target_url.startswith("sqlite") else {}
-    engine = create_engine(
-        target_url,
-        pool_pre_ping=True,
-        connect_args=connect_args,
-    )
+    if target_url.startswith("sqlite"):
+        engine = create_engine(
+            target_url,
+            connect_args={"check_same_thread": False},
+        )
+    else:
+        # NullPool is recommended for serverless environments (Vercel/Lambda) to avoid connection leaks & freezes
+        engine = create_engine(
+            target_url,
+            poolclass=NullPool,
+            pool_pre_ping=True,
+        )
 except Exception as e:
     logger.warning(f"Database engine init with primary URL failed: {e}. Falling back to SQLite.")
     engine = create_engine(
         FALLBACK_DB,
-        pool_pre_ping=True,
         connect_args={"check_same_thread": False},
     )
 
