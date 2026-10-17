@@ -32,3 +32,6 @@ except Exception as e:
                 "current_dir": os.getcwd(),
             }
         )
+
+# Support both ASGI conventions
+handler = app

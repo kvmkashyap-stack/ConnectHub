@@ -32,3 +32,5 @@ except Exception as e:
                 "current_dir": os.getcwd(),
             }
         )
+
+handler = app
