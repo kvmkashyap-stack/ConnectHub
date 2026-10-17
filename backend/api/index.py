@@ -1,39 +1,27 @@
-import os
-import sys
+import sys, os, traceback
 from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse
 
-# Immediate top-level FastAPI instance guaranteed for Vercel AST inspection
+# Top-level app instance required for Vercel Python runtime inspection
 app = FastAPI(title="ConnectHub API")
 
-_current_dir = os.path.dirname(os.path.abspath(__file__))
-_backend_dir = os.path.dirname(_current_dir)
-_root_dir = os.path.dirname(_backend_dir)
+_curr = os.path.dirname(os.path.abspath(__file__))
+_parent = os.path.dirname(_curr)
+_backend = os.path.join(_parent, "backend")
 
-for _p in [_backend_dir, _current_dir, _root_dir]:
-    if os.path.exists(_p) and _p not in sys.path:
-        sys.path.insert(0, _p)
+for _d in [_backend, _parent, _curr]:
+    if os.path.exists(_d) and _d not in sys.path:
+        sys.path.insert(0, _d)
 
 try:
     import main as _main
     app = _main.app
-except Exception as _err:
-    import traceback
-    _tb = traceback.format_exc()
-    from fastapi.responses import JSONResponse
+except Exception:
+    err = traceback.format_exc()
 
-    @app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
-    async def _catch_all(full_path: str):
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status": "initialization_failed",
-                "error": str(_err),
-                "traceback": _tb.splitlines(),
-                "python_path": sys.path,
-                "current_dir": os.getcwd(),
-            }
-        )
+    @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
+    def show_error(path: str):
+        return PlainTextResponse(err, status_code=500)
 
-# Top-level ASGI entrypoints for Vercel
 handler = app
 application = app
