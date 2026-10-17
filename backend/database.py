@@ -6,12 +6,20 @@ from sqlalchemy.orm import sessionmaker,DeclarativeBase
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Fallback to local SQLite if DATABASE_URL is not set (prevents cold-start crash during deploy)
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is missing. Check your .env file.")
+    DATABASE_URL = "sqlite:///./connecthub.db"
+
+# Normalise postgres:// scheme to postgresql:// for SQLAlchemy compatibility
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
+    connect_args=connect_args,
 )
 
 SessionLocal = sessionmaker(

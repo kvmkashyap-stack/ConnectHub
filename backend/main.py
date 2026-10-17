@@ -1,3 +1,11 @@
+import os
+import sys
+
+# Ensure backend directory is in sys.path so modules can always be imported
+_backend_dir = os.path.dirname(os.path.abspath(__file__))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -34,11 +42,19 @@ from schemas.chat import (
 app = FastAPI(title="ConnectHub API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Auto-initialize database tables on startup
+try:
+    from database import Base, engine
+    Base.metadata.create_all(bind=engine)
+except Exception as _e:
+    pass
 
 password_hash = PasswordHash.recommended()
 
