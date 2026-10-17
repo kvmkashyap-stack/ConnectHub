@@ -9,7 +9,6 @@ if _backend_dir not in sys.path:
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pwdlib import PasswordHash
 from sqlalchemy import text
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
