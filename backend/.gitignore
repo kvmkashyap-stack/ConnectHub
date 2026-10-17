@@ -1,0 +1,15 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Allow an example configuration file to be committed
+!.env.example
+
+# Next.js
+node_modules/
+.next/
