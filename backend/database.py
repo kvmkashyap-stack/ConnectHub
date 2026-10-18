@@ -29,13 +29,23 @@ try:
             target_url,
             connect_args={"check_same_thread": False},
         )
-    else:
         # NullPool is recommended for serverless environments (Vercel/Lambda) to avoid connection leaks & freezes
-        engine = create_engine(
-            target_url,
-            poolclass=NullPool,
-            pool_pre_ping=True,
-        )
+        try:
+            engine = create_engine(
+                target_url,
+                poolclass=NullPool,
+                pool_pre_ping=True,
+            )
+        except Exception as _driver_err:
+            if target_url.startswith("postgresql://"):
+                alt_url = target_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+                engine = create_engine(
+                    alt_url,
+                    poolclass=NullPool,
+                    pool_pre_ping=True,
+                )
+            else:
+                raise _driver_err
 except Exception as e:
     logger.warning(f"Database engine init with primary URL failed: {e}. Falling back to SQLite.")
     engine = create_engine(

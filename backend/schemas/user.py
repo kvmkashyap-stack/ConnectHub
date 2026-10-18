@@ -1,5 +1,10 @@
+from pydantic import BaseModel, ConfigDict, Field
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+try:
+    import email_validator
+    from pydantic import EmailStr
+except Exception:
+    EmailStr = str
 
 
 class UserCreate(BaseModel):
