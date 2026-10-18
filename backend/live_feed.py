@@ -535,7 +535,7 @@ async def fetch_live_topic_posts(query: str, limit: int = 15) -> List[Dict[str, 
 # ----------------------------------------------------------------------------
 # Main social feed
 # ----------------------------------------------------------------------------
-async def fetch_live_social(category: str = "all", limit: int = 40) -> List[Dict[str, Any]]:
+async def fetch_live_social(category: str = "all", limit: int = 50) -> List[Dict[str, Any]]:
     cache_key = f"vip_social_{category}_{limit}"
     cached = get_from_cache(cache_key)
     if cached is not None:
@@ -565,9 +565,18 @@ async def fetch_live_social(category: str = "all", limit: int = 40) -> List[Dict
             seen.add(p["id"])
             unique.append(p)
 
-    # newest first inside each category, then interleave categories for a balanced feed
+    # Put VIP posts first inside each category so all requested figures are prominently visible
+    vip_names = {v["name"].lower() for v_list in VIP_REGISTRY.values() for v in v_list}
+    vip_posts = [p for p in unique if p.get("author", "").lower() in vip_names or p.get("display_name", "").lower() in vip_names or p.get("source") in ("x", "news")]
+    other_posts = [p for p in unique if p not in vip_posts]
+
+    sorted_posts = (
+        sorted(vip_posts, key=lambda p: p.get("created_at", ""), reverse=True)
+        + sorted(other_posts, key=lambda p: p.get("created_at", ""), reverse=True)
+    )
+
     by_cat: Dict[str, List[Dict[str, Any]]] = {}
-    for p in sorted(unique, key=lambda p: p.get("created_at", ""), reverse=True):
+    for p in sorted_posts:
         by_cat.setdefault(p.get("category", "sports"), []).append(p)
 
     interleaved: List[Dict[str, Any]] = []

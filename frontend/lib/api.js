@@ -38,7 +38,7 @@ export async function fetchLiveTrends(geo = 'both') {
 }
 
 export async function fetchLiveSocial(category = 'all') {
-  return api(`/api/live/social-feed?category=${category}&limit=25`);
+  return api(`/api/live/social-feed?category=${category}&limit=50`);
 }
 
 export async function fetchLiveReels() {

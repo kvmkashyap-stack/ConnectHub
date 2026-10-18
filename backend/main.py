@@ -115,8 +115,8 @@ async def get_live_trends_endpoint(geo: str = "both"):
 
 
 @app.get("/api/live/social-feed")
-async def get_live_social_endpoint(category: str = "all", limit: int = 20):
-    """Fetch live X-like public social posts via Bluesky AT Protocol"""
+async def get_live_social_endpoint(category: str = "all", limit: int = 50):
+    """Fetch live public social posts from VIPs across sports, cinema, politics & tech"""
     return await fetch_live_social(category=category, limit=limit)
 
 

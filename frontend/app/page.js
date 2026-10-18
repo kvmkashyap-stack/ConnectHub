@@ -852,7 +852,7 @@ export default function Page() {
     const topicPosts = cleanSearch ? (liveTopicPosts[cleanSearch] || []) : [];
 
     const basePool = feedTab === 'Live X / Bluesky'
-      ? (liveSocialPosts.length > 0 ? liveSocialPosts : posts)
+      ? liveSocialPosts
       : posts;
 
     // Place matching live topic posts directly at the top of the feed
@@ -1709,6 +1709,20 @@ export default function Page() {
                                     {post.role_badge}
                                   </span>
                                 )}
+                                {post.newsSource && (
+                                  <span
+                                    className="source-chip"
+                                    style={{
+                                      fontSize: '10px',
+                                      padding: '2px 7px',
+                                      marginLeft: '6px',
+                                      background: 'var(--card, rgba(255, 255, 255, 0.08))',
+                                      color: 'var(--text-muted)'
+                                    }}
+                                  >
+                                    via {post.newsSource}
+                                  </span>
+                                )}
                                 {post.source === 'bluesky' && !post.role_badge && (
                                   <span className="source-chip" style={{ fontSize: '10px', padding: '1px 6px', marginLeft: '6px' }}>
                                     Live Bluesky
@@ -1728,7 +1742,30 @@ export default function Page() {
                         </button>
                       </div>
 
-                      <div className="post-content">{post.content}</div>
+                      <div className="post-content">
+                        {post.content}
+                        {post.url && (
+                          <div style={{ marginTop: '8px' }}>
+                            <a
+                              href={post.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '12px',
+                                color: 'var(--accent)',
+                                textDecoration: 'none',
+                                fontWeight: 500
+                              }}
+                            >
+                              <span>{post.newsSource ? `Read full article on ${post.newsSource}` : 'View source link'}</span>
+                              <Share2 size={11} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
 
                       {/* Image Media with Lightbox Zoom */}
                       {post.image && (
@@ -1851,23 +1888,45 @@ export default function Page() {
                     </article>
                   ))
                 ) : (
-                  <div className="empty-state card-surface">
-                    <Search size={32} className="muted-icon" />
-                    <h3>{search ? `No posts found for "${search}"` : 'No posts found'}</h3>
-                    <p>
-                      {search
-                        ? 'Try searching for another topic or clear the filter to see all posts.'
-                        : 'Follow more creators or check the "For you" feed to populate your timeline.'}
-                    </p>
-                    {search && (
-                      <button
-                        type="button"
-                        className="primary-btn"
-                        style={{ marginTop: '14px' }}
-                        onClick={() => setSearch('')}
-                      >
-                        Clear search filter
-                      </button>
+                  <div className="empty-state card-surface" style={{ textAlign: 'center', padding: '36px 20px' }}>
+                    {loadingLive && feedTab === 'Live X / Bluesky' ? (
+                      <>
+                        <RefreshCw size={28} className="spinning" style={{ margin: '0 auto 12px', color: 'var(--accent)' }} />
+                        <h3>Loading Live X Stream…</h3>
+                        <p>Fetching real-time updates from verified figures across sports, cinema, politics & tech.</p>
+                      </>
+                    ) : (
+                      <>
+                        <Search size={32} className="muted-icon" />
+                        <h3>{search ? `No posts found for "${search}"` : (feedTab === 'Live X / Bluesky' ? 'No live posts available' : 'No posts found')}</h3>
+                        <p>
+                          {search
+                            ? 'Try searching for another topic or clear the filter to see all posts.'
+                            : (feedTab === 'Live X / Bluesky'
+                                ? 'Tap the Refresh button to load the latest live public posts.'
+                                : 'Follow more creators or check the "For you" feed to populate your timeline.')}
+                        </p>
+                        {feedTab === 'Live X / Bluesky' && (
+                          <button
+                            type="button"
+                            className="primary-btn"
+                            style={{ marginTop: '14px', marginInline: 'auto' }}
+                            onClick={() => loadLiveSocial(liveSocialCategory)}
+                          >
+                            <RefreshCw size={14} style={{ marginRight: '6px' }} /> Refresh Live X Feed
+                          </button>
+                        )}
+                        {search && (
+                          <button
+                            type="button"
+                            className="primary-btn"
+                            style={{ marginTop: '14px' }}
+                            onClick={() => setSearch('')}
+                          >
+                            Clear search filter
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
