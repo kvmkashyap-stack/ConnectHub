@@ -1572,46 +1572,99 @@ export default function Page() {
                       className="live-x-header-bar card-surface"
                       style={{
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '10px 16px',
-                        borderRadius: '12px',
+                        flexDirection: 'column',
+                        gap: '12px',
+                        padding: '12px 16px',
+                        borderRadius: '14px',
                         marginBottom: '16px',
                         border: '1px solid var(--line)',
                         background: 'var(--surface)'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="online-indicator" style={{ position: 'static', display: 'inline-block' }} />
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
-                          Live X Stream
-                        </span>
-                        <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                          • Real-time updates
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="online-indicator" style={{ position: 'static', display: 'inline-block' }} />
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                            Live X Stream
+                          </span>
+                          <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                            • Real-time updates
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="primary-btn icon-label-btn"
+                          onClick={async () => {
+                            await loadLiveSocial(liveSocialCategory);
+                            showToast('Refreshed latest VIP feed!');
+                          }}
+                          disabled={loadingLive}
+                          title="Fetch latest posts from live network"
+                          style={{
+                            fontSize: '12px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            boxShadow: 'var(--shadow-sm)'
+                          }}
+                        >
+                          <RefreshCw size={13} className={loadingLive ? 'spinning' : ''} />
+                          <span>{loadingLive ? 'Refreshing…' : 'Refresh Feed'}</span>
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        className="primary-btn icon-label-btn"
-                        onClick={async () => {
-                          await loadLiveSocial('all');
-                          showToast('Fetched latest live X posts!');
-                        }}
-                        disabled={loadingLive}
-                        title="Fetch latest posts from live network"
+
+                      {/* Category Filter Pills */}
+                      <div
+                        className="live-x-filter-pills"
                         style={{
-                          fontSize: '12px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 14px',
-                          borderRadius: '20px',
-                          boxShadow: 'var(--shadow-sm)'
+                          display: 'flex',
+                          gap: '8px',
+                          overflowX: 'auto',
+                          paddingBottom: '2px',
+                          scrollbarWidth: 'none'
                         }}
                       >
-                        <RefreshCw size={13} className={loadingLive ? 'spinning' : ''} />
-                        <span>{loadingLive ? 'Refreshing…' : 'Refresh Feed'}</span>
-                      </button>
+                        {[
+                          { id: 'all', label: 'All VIPs', icon: '🌟' },
+                          { id: 'sports', label: 'Cricketers & Athletes', icon: '🏏' },
+                          { id: 'actors', label: 'Actors & Cinema', icon: '🎬' },
+                          { id: 'politicians', label: 'Politicians & Leaders', icon: '🏛️' },
+                          { id: 'entrepreneurs', label: 'Entrepreneurs & Tech', icon: '⚡' },
+                        ].map((c) => {
+                          const isActive = liveSocialCategory === c.id;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setLiveSocialCategory(c.id);
+                                loadLiveSocial(c.id);
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '12px',
+                                fontWeight: isActive ? 600 : 500,
+                                padding: '6px 14px',
+                                borderRadius: '20px',
+                                border: isActive ? '1px solid var(--accent)' : '1px solid var(--line)',
+                                background: isActive ? 'var(--accent)' : 'var(--card, rgba(255,255,255,0.04))',
+                                color: isActive ? '#ffffff' : 'var(--text)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0
+                              }}
+                            >
+                              <span>{c.icon}</span>
+                              <span>{c.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -1620,8 +1673,22 @@ export default function Page() {
                       shownPosts.map((post) => (
                         <article className="post-card card-surface" key={post.id}>
                           <div className="post-head">
-                            <div className="avatar avatar-lavender avatar-lg">
-                              {(post.display_name || post.author || 'M')[0].toUpperCase()}
+                            <div className="avatar avatar-lavender avatar-lg" style={{ position: 'relative' }}>
+                              {post.avatar ? (
+                                <img
+                                  src={post.avatar}
+                                  alt={post.display_name || post.author}
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    if (e.currentTarget.nextElementSibling) {
+                                      e.currentTarget.nextElementSibling.style.display = 'inline';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <span style={{ display: post.avatar ? 'none' : 'inline' }}>
+                                {(post.display_name || post.author || 'M')[0].toUpperCase()}
+                              </span>
                             </div>
                             <div className="post-byline">
                               <b>

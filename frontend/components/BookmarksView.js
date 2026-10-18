@@ -30,8 +30,22 @@ export default function BookmarksView({
           bookmarkedPosts.map((post) => (
             <article className="post-card card-surface" key={post.id}>
               <div className="post-head">
-                <div className="avatar avatar-lavender avatar-lg">
-                  {(post.display_name || post.author || 'M')[0].toUpperCase()}
+                <div className="avatar avatar-lavender avatar-lg" style={{ position: 'relative' }}>
+                  {post.avatar ? (
+                    <img
+                      src={post.avatar}
+                      alt={post.display_name || post.author}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.nextElementSibling) {
+                          e.currentTarget.nextElementSibling.style.display = 'inline';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <span style={{ display: post.avatar ? 'none' : 'inline' }}>
+                    {(post.display_name || post.author || 'M')[0].toUpperCase()}
+                  </span>
                 </div>
                 <div className="post-byline">
                   <b>{post.display_name || post.author || `Member ${post.author_id}`}</b>

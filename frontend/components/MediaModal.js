@@ -22,8 +22,22 @@ export default function MediaModal({ media, onClose, onLike, isLiked, showToast 
 
         <div className="media-lightbox-right">
           <div className="lightbox-header">
-            <div className="avatar avatar-lavender avatar-md">
-              {(media.author || 'M')[0].toUpperCase()}
+            <div className="avatar avatar-lavender avatar-md" style={{ position: 'relative' }}>
+              {media.avatar ? (
+                <img
+                  src={media.avatar}
+                  alt={media.author || media.display_name}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    if (e.currentTarget.nextElementSibling) {
+                      e.currentTarget.nextElementSibling.style.display = 'inline';
+                    }
+                  }}
+                />
+              ) : null}
+              <span style={{ display: media.avatar ? 'none' : 'inline' }}>
+                {(media.author || 'M')[0].toUpperCase()}
+              </span>
             </div>
             <div>
               <b>{media.author || media.display_name || 'Member'}</b>
