@@ -28,7 +28,7 @@ export default function ProfileView({
         <div className="profile-header-details">
           <div className="profile-avatar-row">
             <div className="avatar avatar-lavender avatar-profile-lg">
-              {(user?.display_name || user?.username || 'A')[0].toUpperCase()}
+              {(user?.display_name || user?.username || 'U')[0].toUpperCase()}
             </div>
             <button className="outline-btn edit-profile-btn" onClick={onEditProfile}>
               <Edit3 size={15} /> Edit Profile
@@ -37,14 +37,14 @@ export default function ProfileView({
 
           <div className="profile-names-block">
             <h2>
-              {user?.display_name || user?.username || 'Alex Rivera'}
+              {user?.display_name || user?.username || 'Member'}
               <span className="verified"><Check size={10} /></span>
             </h2>
-            <span className="profile-handle">@{user?.username || 'alex'}</span>
+            <span className="profile-handle">@{user?.username || 'member'}</span>
           </div>
 
           <p className="profile-bio-text">
-            {user?.bio || 'Building things and connecting with curious minds ✨'}
+            {user?.bio || 'Active member on ConnectHub ✨'}
           </p>
 
           <div className="profile-meta-row">
@@ -52,7 +52,7 @@ export default function ProfileView({
               <MapPin size={14} /> Global
             </span>
             <span className="profile-meta-item">
-              <Link2 size={14} /> connecthub.app/{user?.username || 'alex'}
+              <Link2 size={14} /> connecthub.app/{user?.username || 'member'}
             </span>
             <span className="profile-meta-item">
               <Calendar size={14} /> Joined March 2026

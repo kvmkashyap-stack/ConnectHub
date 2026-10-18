@@ -160,7 +160,7 @@ def register_user(
         username=user_data.username,
         email=str(user_data.email),
         hashed_password=password_hash.hash(user_data.password),
-        display_name=user_data.display_name,
+        display_name=(user_data.display_name.strip() if user_data.display_name and user_data.display_name.strip() else user_data.username),
     )
 
     try:

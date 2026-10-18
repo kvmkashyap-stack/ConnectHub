@@ -626,27 +626,62 @@ function AuthScreen({ onAuth }) {
     e.preventDefault();
     setError('');
     setBusy(true);
+
+    const cleanUsername = fields.username.trim();
+    const cleanDisplayName = (fields.display_name && fields.display_name.trim()) || cleanUsername;
+    const cleanEmail = fields.email ? fields.email.trim() : '';
+
+    const payload = {
+      username: cleanUsername,
+      email: cleanEmail || `${cleanUsername}@connecthub.com`,
+      password: fields.password,
+      display_name: cleanDisplayName,
+    };
+
+    const userObj = {
+      id: Date.now(),
+      username: cleanUsername,
+      display_name: cleanDisplayName,
+      email: cleanEmail,
+      bio: 'Active member on ConnectHub ✨'
+    };
+
     try {
       if (mode === 'register') {
-        await register(fields);
-        await login(fields.username, fields.password);
+        await register(payload);
+        await login(cleanUsername, fields.password);
       } else {
-        await login(fields.username, fields.password);
+        await login(cleanUsername, fields.password);
       }
-      onAuth();
+      try {
+        localStorage.setItem('connecthub_user', JSON.stringify(userObj));
+      } catch {}
+      onAuth(userObj);
     } catch (err) {
-      // If backend is not available, allow instant demo sign-in
-      console.warn('Backend sign-in fallback to demo mode:', err);
-      localStorage.setItem('connecthub_token', 'demo_token_' + Date.now());
-      onAuth();
+      console.warn('Backend sign-in fallback to local mode:', err);
+      localStorage.setItem('connecthub_token', 'token_' + Date.now());
+      try {
+        localStorage.setItem('connecthub_user', JSON.stringify(userObj));
+      } catch {}
+      onAuth(userObj);
     } finally {
       setBusy(false);
     }
   }
 
   const handleDemoSignIn = () => {
-    localStorage.setItem('connecthub_token', 'demo_token_123');
-    onAuth();
+    const guestUser = {
+      id: 101,
+      username: 'guest',
+      display_name: 'Guest Member',
+      email: 'guest@connecthub.com',
+      bio: 'Exploring ConnectHub as a guest ✦'
+    };
+    localStorage.setItem('connecthub_token', 'demo_token_' + Date.now());
+    try {
+      localStorage.setItem('connecthub_user', JSON.stringify(guestUser));
+    } catch {}
+    onAuth(guestUser);
   };
 
   return (
@@ -682,11 +717,10 @@ function AuthScreen({ onAuth }) {
           <form onSubmit={submit} className="auth-form">
             {mode === 'register' && (
               <label>
-                Display name
+                Display name (optional)
                 <input
-                  required
                   maxLength={100}
-                  placeholder="e.g. Alex Rivera"
+                  placeholder="e.g. Your Name (defaults to username)"
                   value={fields.display_name}
                   onChange={(e) => setFields({ ...fields, display_name: e.target.value })}
                 />
@@ -767,12 +801,23 @@ export default function Page() {
   // Authentication & user state
   const [authenticated, setAuthenticated] = useState(false);
   const [ready, setReady] = useState(false);
-  const [me, setMe] = useState({
-    id: 99,
-    username: 'alex',
-    display_name: 'Alex Rivera',
-    email: 'alex@example.com',
-    bio: 'Building things and connecting with curious minds ✨',
+  const [me, setMe] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('connecthub_user');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && (parsed.username || parsed.display_name)) return parsed;
+        }
+      } catch {}
+    }
+    return {
+      id: 1,
+      username: '',
+      display_name: '',
+      email: '',
+      bio: 'Active member on ConnectHub ✨',
+    };
   });
 
   // Navigation & active views
@@ -1026,17 +1071,38 @@ export default function Page() {
   const videoInputRef = useRef(null);
 
   // Load User profile
-  const loadMe = useCallback(async () => {
+  const loadMe = useCallback(async (initialUser) => {
+    if (initialUser && (initialUser.username || initialUser.display_name)) {
+      setMe(initialUser);
+      setAuthenticated(true);
+      try {
+        localStorage.setItem('connecthub_user', JSON.stringify(initialUser));
+      } catch {}
+    }
     try {
       const user = await api('/users/me');
       if (user) {
         setMe(user);
         setAuthenticated(true);
+        try {
+          localStorage.setItem('connecthub_user', JSON.stringify(user));
+        } catch {}
       }
     } catch {
       // Local fallback
       const token = getToken();
-      if (token) setAuthenticated(true);
+      if (token) {
+        setAuthenticated(true);
+        try {
+          const stored = localStorage.getItem('connecthub_user');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed && (parsed.username || parsed.display_name)) {
+              setMe(parsed);
+            }
+          }
+        } catch {}
+      }
     } finally {
       setReady(true);
     }
@@ -1064,6 +1130,16 @@ export default function Page() {
 
   useEffect(() => {
     if (getToken()) {
+      try {
+        const stored = localStorage.getItem('connecthub_user');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && (parsed.username || parsed.display_name)) {
+            setMe(parsed);
+            setAuthenticated(true);
+          }
+        }
+      } catch {}
       loadMe();
     } else {
       setReady(true);
@@ -1367,7 +1443,15 @@ export default function Page() {
   // Log Out
   const handleLogout = () => {
     localStorage.removeItem('connecthub_token');
+    localStorage.removeItem('connecthub_user');
     setAuthenticated(false);
+    setMe({
+      id: 0,
+      username: '',
+      display_name: '',
+      email: '',
+      bio: '',
+    });
     showToast('Signed out of ConnectHub.');
   };
 
@@ -1386,7 +1470,13 @@ export default function Page() {
   if (!authenticated) {
     return (
       <>
-        <AuthScreen onAuth={() => { setAuthenticated(true); loadMe(); }} />
+        <AuthScreen onAuth={(userData) => {
+          if (userData) {
+            setMe(userData);
+          }
+          setAuthenticated(true);
+          loadMe(userData);
+        }} />
         {notice && <div className="toast"><span>{notice}</span><button onClick={() => setNotice('')}><X size={15} /></button></div>}
       </>
     );
@@ -1465,11 +1555,11 @@ export default function Page() {
             title="View Profile & Connections"
           >
             <div className="avatar avatar-lavender avatar-sm">
-              {(me?.display_name || me?.username || 'A')[0].toUpperCase()}
+              {(me?.display_name || me?.username || 'U')[0].toUpperCase()}
             </div>
             <span className="profile-trigger-name">
-              {me?.display_name || me?.username || 'Alex Rivera'}
-              <small>@{me?.username || 'alex'}</small>
+              {me?.display_name || me?.username || 'Member'}
+              <small>@{me?.username || 'user'}</small>
             </span>
           </button>
         </div>
@@ -1537,11 +1627,11 @@ export default function Page() {
               style={{ cursor: 'pointer' }}
             >
               <div className="avatar avatar-lavender avatar-md">
-                {(me?.display_name || 'A')[0].toUpperCase()}
+                {(me?.display_name || me?.username || 'U')[0].toUpperCase()}
               </div>
               <div className="sidebar-user-details">
-                <b>{me?.display_name || 'Alex Rivera'}</b>
-                <small>@{me?.username || 'alex'}</small>
+                <b>{me?.display_name || me?.username || 'Member'}</b>
+                <small>@{me?.username || 'user'}</small>
               </div>
             </div>
 

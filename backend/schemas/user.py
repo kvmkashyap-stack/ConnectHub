@@ -7,11 +7,13 @@ except Exception:
     EmailStr = str
 
 
+from typing import Optional
+
 class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
-    display_name: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=6, max_length=128)
+    display_name: Optional[str] = Field(default=None, max_length=100)
 
 
 class UserResponse(BaseModel):
