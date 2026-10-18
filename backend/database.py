@@ -1,66 +1,43 @@
 import os
-import logging
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import sessionmaker, declarative_base
 
 load_dotenv()
-logger = logging.getLogger("connecthub.database")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
-# Resolve serverless writable path (AWS Lambda / Vercel has read-only root, writable /tmp)
-if os.path.exists("/tmp") and os.access("/tmp", os.W_OK):
-    FALLBACK_DB = "sqlite:////tmp/connecthub.db"
-else:
-    FALLBACK_DB = "sqlite:///./connecthub.db"
+# Render/Neon/Supabase sometimes give "postgres://", SQLAlchemy needs "postgresql://"
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-target_url = DATABASE_URL or FALLBACK_DB
-
-# Normalise postgres:// to postgresql:// for SQLAlchemy compatibility
-if target_url.startswith("postgres://"):
-    target_url = target_url.replace("postgres://", "postgresql://", 1)
-
-from sqlalchemy.pool import NullPool
-
-try:
-    if target_url.startswith("sqlite"):
+if DATABASE_URL:
+    try:
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+    except Exception:
+        # Fallback to /tmp SQLite if remote driver fails
         engine = create_engine(
-            target_url,
+            "sqlite:////tmp/app.db",
             connect_args={"check_same_thread": False},
         )
-        # NullPool is recommended for serverless environments (Vercel/Lambda) to avoid connection leaks & freezes
-        try:
-            engine = create_engine(
-                target_url,
-                poolclass=NullPool,
-                pool_pre_ping=True,
-            )
-        except Exception as _driver_err:
-            if target_url.startswith("postgresql://"):
-                alt_url = target_url.replace("postgresql://", "postgresql+psycopg2://", 1)
-                engine = create_engine(
-                    alt_url,
-                    poolclass=NullPool,
-                    pool_pre_ping=True,
-                )
-            else:
-                raise _driver_err
-except Exception as e:
-    logger.warning(f"Database engine init with primary URL failed: {e}. Falling back to SQLite.")
+else:
+    # Vercel's disk is read-only except /tmp, so SQLite here is temporary and resets
     engine = create_engine(
-        FALLBACK_DB,
+        "sqlite:////tmp/app.db",
         connect_args={"check_same_thread": False},
     )
 
-SessionLocal = sessionmaker(
-    bind=engine,
-    autoflush=False,
-    autocommit=False,
-)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-class Base(DeclarativeBase):
-    pass
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 def test_database_connection():
     with engine.connect() as connection:
